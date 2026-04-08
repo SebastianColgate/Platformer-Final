@@ -5,6 +5,7 @@ import math
 from raylib import *
 from pyray import *
 
+sys.dont_write_bytecode = True
 
 # --- Game Constants ---
 SCREEN_WIDTH = 800
@@ -50,9 +51,10 @@ TILE_COLS = len(LEVEL[0])
 WORLD_WIDTH = TILE_COLS * TILE_SIZE
 WORLD_HEIGHT = TILE_ROWS * TILE_SIZE
 
-
 COIN_TEXTURE_PATH = os.path.join(os.path.dirname(__file__), "textures", "star_coin.png")
 coin_texture = None
+COIN_SOUND_PATH = os.path.join(os.path.dirname(__file__), "textures", "coin_pickup.wav")
+coin_sound = None
 
 # --- Utility Functions ---
 
@@ -80,6 +82,20 @@ def draw_coin_texture(center_x, center_y, size=26):
     destination = Rectangle(center_x - size / 2, center_y - size / 2, size, size)
     DrawTexturePro(coin_texture, source, destination, Vector2(0, 0), 0.0, WHITE)
 
+
+def load_coin_sound():
+    global coin_sound
+
+    if coin_sound is None:
+        coin_sound = LoadSound(COIN_SOUND_PATH.encode("utf-8"))
+
+
+def unload_coin_sound():
+    global coin_sound
+
+    if coin_sound is not None:
+        UnloadSound(coin_sound)
+        coin_sound = None
 
 def parse_level(level):
     """
@@ -410,7 +426,9 @@ def main():
     # --- Initialization ---
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Raylib 2D Platformer Clone (Stomp Mechanic)".encode('utf-8'))
     SetTargetFPS(60)
+    InitAudioDevice()
     load_coin_texture()
+    load_coin_sound()
 
     # Prepare Level Data: Separate collision map from dynamic entities
     game_level, collectibles, enemies = parse_level(LEVEL)
@@ -448,6 +466,7 @@ def main():
                 for index in sorted(collected_indices, reverse=True):
                     collectibles.pop(index)
                     score += 10
+                    PlaySound(coin_sound)
             
             # Check for enemy collision (Stomp/Death/Reset)
             hit_type, enemy_index = player.check_enemy_collision(enemies)
@@ -498,7 +517,9 @@ def main():
         EndDrawing()
 
     # --- De-Initialization ---
+    unload_coin_sound()
     unload_coin_texture()
+    CloseAudioDevice()
     CloseWindow()
 
 if __name__ == "__main__":
