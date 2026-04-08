@@ -1,7 +1,10 @@
+import sys
+import os
 import random
 import math
 from raylib import *
 from pyray import *
+
 
 # --- Game Constants ---
 SCREEN_WIDTH = 800
@@ -47,7 +50,36 @@ TILE_COLS = len(LEVEL[0])
 WORLD_WIDTH = TILE_COLS * TILE_SIZE
 WORLD_HEIGHT = TILE_ROWS * TILE_SIZE
 
+
+COIN_TEXTURE_PATH = os.path.join(os.path.dirname(__file__), "textures", "star_coin.png")
+coin_texture = None
+
 # --- Utility Functions ---
+
+
+def load_coin_texture():
+    global coin_texture
+
+    if coin_texture is None:
+        coin_texture = LoadTexture(COIN_TEXTURE_PATH.encode("utf-8"))
+
+
+def unload_coin_texture():
+    global coin_texture
+
+    if coin_texture is not None:
+        UnloadTexture(coin_texture)
+        coin_texture = None
+
+
+def draw_coin_texture(center_x, center_y, size=26):
+    if coin_texture is None:
+        return
+
+    source = Rectangle(0, 0, coin_texture.width, coin_texture.height)
+    destination = Rectangle(center_x - size / 2, center_y - size / 2, size, size)
+    DrawTexturePro(coin_texture, source, destination, Vector2(0, 0), 0.0, WHITE)
+
 
 def parse_level(level):
     """
@@ -343,19 +375,8 @@ def draw_level(level):
                 
 def draw_coins(coins):
     """Draws the active coins as small yellow diamonds (polygons)."""
-    radius = TILE_SIZE * 0.3 / 2 
-    
     for cx, cy in coins:
-        v1 = Vector2(cx, cy - radius * 2)
-        v2 = Vector2(cx + radius * 1.5, cy)
-        v3 = Vector2(cx, cy + radius * 2)
-        v4 = Vector2(cx - radius * 1.5, cy)
-        
-        DrawTriangle(v1, v2, v4, YELLOW)
-        DrawTriangle(v2, v3, v4, GOLD)
-        
-        DrawLineV(v1, v3, BLACK)
-        DrawLineV(v2, v4, BLACK)
+        draw_coin_texture(cx, cy, size=26)
 
 
 def update_camera(camera, player, world_width, world_height, screen_width, screen_height):
@@ -389,6 +410,7 @@ def main():
     # --- Initialization ---
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Raylib 2D Platformer Clone (Stomp Mechanic)".encode('utf-8'))
     SetTargetFPS(60)
+    load_coin_texture()
 
     # Prepare Level Data: Separate collision map from dynamic entities
     game_level, collectibles, enemies = parse_level(LEVEL)
@@ -476,6 +498,7 @@ def main():
         EndDrawing()
 
     # --- De-Initialization ---
+    unload_coin_texture()
     CloseWindow()
 
 if __name__ == "__main__":
