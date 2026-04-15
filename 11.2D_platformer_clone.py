@@ -18,12 +18,18 @@ PLAYER_SPEED = 300.0    # Player horizontal movement speed
 ENEMY_SPEED = 100.0     # Enemy horizontal movement speed
 PLAYER_WIDTH = TILE_SIZE * 0.8
 PLAYER_HEIGHT = TILE_SIZE * 0.9
+WATER_GRAVITY = 500.0
+SWIM_VELOCITY = -280.0
+SWIM_SPEED = 140.0
+EXIT_LIQUID_VELOCITY = -900.0
 
 # --- Tilemap Definitions ---
 TILE_AIR = 0
 TILE_SOLID = 1
 TILE_COIN = 2 
 TILE_ENEMY = 3 
+TILE_WATER = 4
+TILE_POISON = 5
 
 # --- Expanded Level Tilemap Definition (50x16 tiles = 2000px wide) ---
 LEVEL = [
@@ -32,17 +38,17 @@ LEVEL = [
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 0, 0, 0, 0, 0],
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     [0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0],
     [0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 1, 1, 3, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 3, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
-    [0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 2, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    [0, 0, 0, 1, 1, 3, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 3, 0, 0, 1, 1, 1, 0, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 0, 0, 0, 0, 0], 
+    [0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 0, 0, 0, 0, 0],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 5, 5, 5, 5, 5, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 4, 4, 4, 4, 4, 4, 4, 4, 0, 1, 1, 1, 1, 1, 1],
 ]
 TILE_ROWS = len(LEVEL)
 TILE_COLS = len(LEVEL[0])
@@ -142,31 +148,72 @@ class Player:
         self.vx = 0.0
         self.vy = 0.0
         self.is_grounded = False
+        self.is_swimming = False
 
     def get_rect(self):
         """Returns the player's collision bounding box (top-left, width, height)."""
         return (self.x, self.y, self.width, self.height)
 
+    def is_in_liquid(self, level):
+        return self.is_touching_tile(level, TILE_WATER) or self.is_touching_tile(level, TILE_POISON)
+
+    def is_touching_tile(self, level, tile_type):
+        player_rect = self.get_rect()
+        px, py, pw, ph = player_rect
+
+        min_col = int(px / TILE_SIZE)
+        max_col = int((px + pw) / TILE_SIZE)
+        min_row = int(py / TILE_SIZE)
+        max_row = int((py + ph) / TILE_SIZE)
+
+        for row in range(min_row, max_row + 1):
+            for col in range(min_col, max_col + 1):
+                if row < 0 or row >= TILE_ROWS or col < 0 or col >= TILE_COLS:
+                    continue
+
+                if level[row][col] == tile_type:
+                    tile_rect = (col * TILE_SIZE, row * TILE_SIZE, TILE_SIZE, TILE_SIZE)
+                    if CheckCollisionRecs(player_rect, tile_rect):
+                        return True
+
+        return False
+
     def update(self, delta_time, level):
+        was_in_liquid = self.is_swimming
+        self.is_swimming = self.is_in_liquid(level)
+
         # 1. Handle Input (Horizontal Movement)
         self.vx = 0.0
+        current_speed = SWIM_SPEED if self.is_swimming else PLAYER_SPEED
         if IsKeyDown(KEY_LEFT) or IsKeyDown(KEY_A):
-            self.vx = -PLAYER_SPEED
+            self.vx = -current_speed
         if IsKeyDown(KEY_RIGHT) or IsKeyDown(KEY_D):
-            self.vx = PLAYER_SPEED
+            self.vx = current_speed
 
         # --- Velocity Zeroing for Stability ---
-        if self.is_grounded:
+        if self.is_grounded and not self.is_swimming:
             self.vy = 0.0
-            
-        # 2. Handle Input (Jump)
-        if (IsKeyPressed(KEY_SPACE) or IsKeyPressed(KEY_UP)) and self.is_grounded:
-            self.vy = JUMP_VELOCITY
 
-        # 3. Apply Gravity
-        self.vy += GRAVITY * delta_time
-        if self.vy > 1000:
-            self.vy = 1000
+        if self.is_swimming:
+            if IsKeyDown(KEY_SPACE) or IsKeyDown(KEY_UP) or IsKeyDown(KEY_W):
+                self.vy = SWIM_VELOCITY
+            elif IsKeyDown(KEY_DOWN) or IsKeyDown(KEY_S):
+                self.vy = SWIM_SPEED
+            else:
+                self.vy *= 0.9
+
+            self.vy += WATER_GRAVITY * delta_time
+            if self.vy > 250:
+                self.vy = 250
+        else:
+            # 2. Handle Input (Jump)
+            if (IsKeyPressed(KEY_SPACE) or IsKeyPressed(KEY_UP)) and self.is_grounded:
+                self.vy = JUMP_VELOCITY
+
+            # 3. Apply Gravity
+            self.vy += GRAVITY * delta_time
+            if self.vy > 1000:
+                self.vy = 1000
 
         # --- Reset grounded state at start of frame update ---
         self.is_grounded = False
@@ -183,6 +230,9 @@ class Player:
         
         # --- Safety Clamp to World Bounds ---
         self.x = max(0, min(self.x, WORLD_WIDTH - self.width))
+        self.is_swimming = self.is_in_liquid(level)
+        if was_in_liquid and not self.is_swimming and self.vy < 0:
+            self.vy = EXIT_LIQUID_VELOCITY
         
     def handle_tile_collision(self, level, axis):
         """Performs AABB collision checks against solid tiles and resolves the collision."""
@@ -273,10 +323,12 @@ class Player:
         self.vx = 0.0
         self.vy = 0.0
         self.is_grounded = False
+        self.is_swimming = False
 
     def draw(self):
         """Draws the player at their world coordinates."""
-        DrawRectangle(int(self.x), int(self.y), int(self.width), int(self.height), BLUE) 
+        player_color = GREEN if self.is_swimming else BLUE
+        DrawRectangle(int(self.x), int(self.y), int(self.width), int(self.height), player_color) 
         if self.is_grounded:
              DrawRectangleLines(int(self.x), int(self.y), int(self.width), int(self.height), WHITE)
         else:
@@ -388,6 +440,20 @@ def draw_level(level):
                 
                 DrawRectangle(x, y, TILE_SIZE, TILE_SIZE, DARKGRAY)
                 DrawRectangleLines(x, y, TILE_SIZE, TILE_SIZE, BLACK)
+            elif tile_value == TILE_WATER:
+                x = col * TILE_SIZE
+                y = row * TILE_SIZE
+
+                DrawRectangle(x, y, TILE_SIZE, TILE_SIZE, Fade(BLUE, 0.55))
+                DrawRectangle(x, y, TILE_SIZE, 6, SKYBLUE)
+                DrawRectangleLines(x, y, TILE_SIZE, TILE_SIZE, DARKBLUE)
+            elif tile_value == TILE_POISON:
+                x = col * TILE_SIZE
+                y = row * TILE_SIZE
+
+                DrawRectangle(x, y, TILE_SIZE, TILE_SIZE, Fade(LIME, 0.6))
+                DrawRectangle(x, y, TILE_SIZE, 6, YELLOW)
+                DrawRectangleLines(x, y, TILE_SIZE, TILE_SIZE, DARKGREEN)
                 
 def draw_coins(coins):
     """Draws the active coins as small yellow diamonds (polygons)."""
@@ -453,6 +519,13 @@ def main():
         # --- Update ---
         if game_state == "PLAYING":
             player.update(delta_time, game_level)
+
+            if player.is_touching_tile(game_level, TILE_POISON):
+                player.reset()
+                score -= 25
+                if score < 0: score = 0
+                update_camera(camera, player, WORLD_WIDTH, WORLD_HEIGHT, SCREEN_WIDTH, SCREEN_HEIGHT)
+                continue
             
             # Update Enemies
             for enemy in enemies:

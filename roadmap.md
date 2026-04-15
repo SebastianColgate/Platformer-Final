@@ -27,3 +27,20 @@ Add a simple coin pickup sound to learn about sounds in this library
 Next/TODO: 
 *Sound Manager
 *Sounds for other events
+
+
+
+### Date: 04/15/2026, Start of lab
+**Goal**
+Add a liquid system, with water you can swim through and poison that hurts you.
+
+**implementation**
+*Technical Plan/Credit*: Extend the current tile map with a water and posions tile and simple swimming physics. Update player color on water 
+*Content Credit*: Self Implemented by doing gravity change
+
+**Commit message** Added basic liquid tiles and swimming area
+
+Next/TODO: 
+*Actual water level design
+*Other Liquids
+*Flood Fill Algorithm on poison that touches water
