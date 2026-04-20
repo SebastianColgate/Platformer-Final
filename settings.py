@@ -1,4 +1,4 @@
-# --- Game Constants ---
+#Game Constants
 SCREEN_WIDTH = 800
 SCREEN_HEIGHT = 600
 TILE_SIZE = 40
@@ -19,17 +19,14 @@ JAR_WIDTH = TILE_SIZE * 0.55
 JAR_HEIGHT = TILE_SIZE * 0.7
 JAR_PUSH_SPEED = 220.0
 
-# --- Tilemap Definitions ---
+#Tilemap Definitions
 TILE_AIR = 0
 TILE_SOLID = 1
 TILE_WATER = 2
 TILE_POISON_WATER = 3
 
-# --- Level Layout ---
-# Legend:
-# . = air, # = solid, ~ = clean water, ! = poisoned water
-# S = player spawn, E = land enemy, e = enemy in water
-# P = poison jar, A = antidote jar, X = exit
+#Level Layout
+# . = air, # = solid, ~ = clean water, ! = poisoned water, S = player spawn, E = land enemy, e = enemy in water, P = poison jar, A = antidote jar, X = exit
 LEVEL = [
     "............................................",
     "............................................",
@@ -51,7 +48,7 @@ LEVEL = [
 assert LEVEL, "LEVEL must not be empty."
 assert all(len(row) == len(LEVEL[0]) for row in LEVEL), "All level rows must have the same width."
 
-# --- World Dimensions ---
+#World Dimensions
 TILE_ROWS = len(LEVEL)
 TILE_COLS = len(LEVEL[0])
 WORLD_WIDTH = TILE_COLS * TILE_SIZE
