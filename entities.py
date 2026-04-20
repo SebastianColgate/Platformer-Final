@@ -28,12 +28,21 @@ from settings import (
 )
 
 
+# --- Game Object Classes ---
+
 class Player:
     def __init__(self, x, y):
+        # Store starting position for reset
+        self.start_x = x
+        self.start_y = y
+
+        # Current position (top-left for collision)
         self.x = x
         self.y = y
         self.width = PLAYER_WIDTH
         self.height = PLAYER_HEIGHT
+
+        # Physics
         self.vx = 0.0
         self.vy = 0.0
         self.is_grounded = False
@@ -153,13 +162,24 @@ class Player:
         outline = WHITE if self.is_grounded else DARKBLUE
         DrawRectangleLines(int(self.x), int(self.y), int(self.width), int(self.height), outline)
 
+    def reset(self):
+        self.x = self.start_x
+        self.y = self.start_y
+        self.vx = 0.0
+        self.vy = 0.0
+        self.is_grounded = False
+        self.is_swimming = False
+
 
 class Enemy:
     def __init__(self, x, y):
+        # Position (top-left for collision)
         self.x = x
         self.y = y
         self.width = TILE_SIZE * 0.7
         self.height = TILE_SIZE * 0.7
+
+        # Physics/Movement
         self.vx = ENEMY_SPEED
         self.vy = 0.0
         self.is_grounded = False
@@ -244,11 +264,14 @@ class Enemy:
 
 class ChemicalJar:
     def __init__(self, kind, x, y):
+        # Position (top-left for collision)
         self.kind = kind
         self.x = x
         self.y = y
         self.width = JAR_WIDTH
         self.height = JAR_HEIGHT
+
+        # Physics/State
         self.vx = 0.0
         self.vy = 0.0
         self.is_grounded = False

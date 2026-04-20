@@ -5,7 +5,7 @@ from pyray import *
 from entities import Player
 from helpers import calculate_clean_score
 from settings import (
-    LEVEL_LAYOUT,
+    LEVEL,
     SCREEN_HEIGHT,
     SCREEN_WIDTH,
     TILE_POISON_WATER,
@@ -16,6 +16,8 @@ from level import parse_level
 
 sys.dont_write_bytecode = True
 
+
+# --- Drawing and Camera Functions ---
 
 def draw_level(level, exit_rect, exit_unlocked):
     from settings import TILE_ROWS, TILE_COLS, TILE_SIZE, TILE_SOLID, TILE_WATER, TILE_POISON_WATER
@@ -67,13 +69,18 @@ def update_camera(camera, player):
 
 
 def main():
+    # --- Initialization ---
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Amphibi-Man Prototype".encode("utf-8"))
     SetTargetFPS(60)
 
-    game_level, spawn_position, jars, enemies, exit_rect, total_water_tiles = parse_level(LEVEL_LAYOUT)
+    # Prepare Level Data: separate collision map from dynamic entities
+    game_level, spawn_position, jars, enemies, exit_rect, total_water_tiles = parse_level(LEVEL)
+
+    # Game State Variables
     player = Player(*spawn_position)
     game_state = "PLAYING"
 
+    # --- Camera Initialization ---
     camera = Camera2D()
     camera.target = Vector2(player.x, player.y)
     camera.offset = Vector2(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2)
@@ -84,14 +91,16 @@ def main():
         nonlocal game_level, spawn_position, jars, enemies, exit_rect
         nonlocal total_water_tiles, player, game_state
 
-        game_level, spawn_position, jars, enemies, exit_rect, total_water_tiles = parse_level(LEVEL_LAYOUT)
+        game_level, spawn_position, jars, enemies, exit_rect, total_water_tiles = parse_level(LEVEL)
         player = Player(*spawn_position)
         game_state = "PLAYING"
         update_camera(camera, player)
 
+    # --- Game Loop ---
     while not WindowShouldClose():
         delta_time = GetFrameTime()
 
+        # --- Update ---
         if IsKeyPressed(KEY_R):
             restart_level()
             continue
@@ -143,6 +152,7 @@ def main():
         clean_score = calculate_clean_score(game_level, total_water_tiles)
         exit_unlocked = len(enemies) == 0
 
+        # --- Draw ---
         BeginDrawing()
         ClearBackground(SKYBLUE)
 
@@ -175,6 +185,7 @@ def main():
 
         EndDrawing()
 
+    # --- De-Initialization ---
     CloseWindow()
 
 

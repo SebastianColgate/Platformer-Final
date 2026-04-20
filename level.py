@@ -14,6 +14,10 @@ from settings import (
 
 
 def parse_level(layout):
+    """
+    Parses the level map, extracts dynamic entities, and returns the
+    tile collision map plus the objects that spawn from the layout.
+    """
     level = []
     jars = []
     enemies = []

@@ -156,3 +156,19 @@ Simplify the chemical jar visuals into plain placeholder shapes.
 Next/TODO:
 *Swap placeholder squares for real sprites later
 *Add break feedback when jars shatter into liquid
+
+
+
+### Date: 04/19/2026, Prototype Feature 8
+**Goal**
+Bring the refactored code back a little closer to the structure of the original base file.
+
+**Implementation**
+*Technical Plan/Credit*: Kept the multi-file split, but adjusted naming, comments, layout constants, and the main game-loop flow so it reads more like the original class base code.
+*Content Credit*: Self implemented cleanup pass.
+
+**Commit message** Align refactor with original base structure
+
+Next/TODO:
+*Keep future refactors close to the original class style
+*Only split files when the code still stays easy to read in one sitting

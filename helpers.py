@@ -3,6 +3,8 @@ from raylib import CheckCollisionRecs
 from settings import TILE_COLS, TILE_POISON_WATER, TILE_ROWS, TILE_SIZE, TILE_WATER
 
 
+# --- Utility Functions ---
+
 def make_spawn_position(col, row, width, height):
     x = col * TILE_SIZE + (TILE_SIZE - width) / 2
     y = row * TILE_SIZE + TILE_SIZE - height
