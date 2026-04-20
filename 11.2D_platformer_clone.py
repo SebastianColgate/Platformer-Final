@@ -3,8 +3,8 @@ from raylib import *
 from pyray import *
 
 from entities import Player
-from game_helpers import calculate_clean_score
-from game_settings import (
+from help import calculate_clean_score
+from settings import (
     LEVEL_LAYOUT,
     SCREEN_HEIGHT,
     SCREEN_WIDTH,
@@ -12,13 +12,13 @@ from game_settings import (
     WORLD_HEIGHT,
     WORLD_WIDTH,
 )
-from level_data import parse_level
+from level import parse_level
 
 sys.dont_write_bytecode = True
 
 
 def draw_level(level, exit_rect, exit_unlocked):
-    from game_settings import TILE_ROWS, TILE_COLS, TILE_SIZE, TILE_SOLID, TILE_WATER, TILE_POISON_WATER
+    from settings import TILE_ROWS, TILE_COLS, TILE_SIZE, TILE_SOLID, TILE_WATER, TILE_POISON_WATER
 
     for row in range(TILE_ROWS):
         for col in range(TILE_COLS):

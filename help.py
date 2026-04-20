@@ -1,6 +1,6 @@
 from raylib import CheckCollisionRecs
 
-from game_settings import TILE_COLS, TILE_POISON_WATER, TILE_ROWS, TILE_SIZE, TILE_WATER
+from settings import TILE_COLS, TILE_POISON_WATER, TILE_ROWS, TILE_SIZE, TILE_WATER
 
 
 def make_spawn_position(col, row, width, height):

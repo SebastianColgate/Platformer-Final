@@ -1,6 +1,6 @@
 from entities import ChemicalJar, Enemy
-from game_helpers import make_spawn_position
-from game_settings import (
+from help import make_spawn_position
+from settings import (
     JAR_HEIGHT,
     JAR_WIDTH,
     PLAYER_HEIGHT,
