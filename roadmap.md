@@ -124,3 +124,19 @@ Simplify the presentation and switch chemicals from pickups to physical jars.
 Next/TODO:
 *Add jar break particles and sound
 *Improve jar pushing so it feels more solid against the player body
+
+
+
+### Date: 04/19/2026, Prototype Feature 6
+**Goal**
+Refactor the prototype into a few simple files without turning it into an overbuilt project.
+
+**Implementation**
+*Technical Plan/Credit*: Split the code into a main game loop file, a settings/layout file, a helpers file, an entities file, and a level parsing file while keeping the same basic student-level structure and behavior.
+*Content Credit*: Self implemented refactor based on the current prototype.
+
+**Commit message** Split prototype into simple modules
+
+Next/TODO:
+*Keep future features in the same simple structure
+*Avoid overengineering unless the class project actually needs it
