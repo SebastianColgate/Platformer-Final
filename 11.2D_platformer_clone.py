@@ -19,7 +19,9 @@ WATER_GRAVITY = 500.0
 SWIM_VELOCITY = -280.0
 SWIM_SPEED = 140.0
 EXIT_LIQUID_VELOCITY = -900.0
-MESSAGE_TIME = 2.5
+JAR_WIDTH = TILE_SIZE * 0.55
+JAR_HEIGHT = TILE_SIZE * 0.7
+JAR_PUSH_SPEED = 220.0
 
 # --- Tile Types ---
 TILE_AIR = 0
@@ -31,32 +33,23 @@ TILE_POISON_WATER = 3
 # Legend:
 # . = air, # = solid, ~ = clean water, ! = poisoned water
 # S = player spawn, E = land enemy, e = enemy starting in water
-# P = poison pickup, A = antidote pickup, X = exit
+# P = poison jar, A = antidote jar, X = exit
 LEVEL_LAYOUT = [
-    "........................................",
-    "........................................",
-    "........................................",
-    "........................................",
-    "........................................",
-    "...................................X....",
-    ".................................#####..",
-    "........................................",
-    "..............................!!!.......",
-    "..............................!!!.......",
-    "..............................!!!.......",
-    "................#~~~#.........!!!.......",
-    "................#~e~#.........!!!.......",
-    "..S...E.......P.#####.....A...!!!.......",
-    "########################################",
-]
-
-SHOWCASE_LABELS = [
-    (2, 12, "Start"),
-    (5, 11, "Stomp enemy"),
-    (14, 11, "Poison demo"),
-    (26, 11, "Clean water"),
-    (31, 7, "Swim up"),
-    (34, 4, "Exit"),
+    "............................................",
+    "............................................",
+    "............................................",
+    "............................................",
+    "............................................",
+    "......................................X.....",
+    "....................................#####...",
+    "............................................",
+    ".................................!!!........",
+    ".................P............A..!!!........",
+    "...............####.........####.!!!........",
+    "..................#~~~#..........!!!........",
+    "..................#~e~#..........!!!........",
+    "..S....E.........................!!!........",
+    "############################################",
 ]
 
 assert LEVEL_LAYOUT, "LEVEL_LAYOUT must not be empty."
@@ -72,10 +65,6 @@ def make_spawn_position(col, row, width, height):
     x = col * TILE_SIZE + (TILE_SIZE - width) / 2
     y = row * TILE_SIZE + TILE_SIZE - height
     return x, y
-
-
-def tile_to_world_center(col, row):
-    return col * TILE_SIZE + TILE_SIZE / 2, row * TILE_SIZE + TILE_SIZE / 2
 
 
 def rect_touches_tile(rect, level, tile_types):
@@ -134,21 +123,26 @@ def flood_fill_liquid(level, start_row, start_col, source_tile, target_tile):
     return changed_tiles
 
 
-def find_liquid_target(layout, start_row, start_col):
-    best_target = (None, None)
-    best_distance = None
+def find_touching_liquid_tile(rect, level):
+    px, py, pw, ph = rect
+    min_col = int(px / TILE_SIZE)
+    max_col = int((px + pw) / TILE_SIZE)
+    min_row = int(py / TILE_SIZE)
+    max_row = int((py + ph) / TILE_SIZE)
 
-    for row in range(TILE_ROWS):
-        for col in range(TILE_COLS):
-            if layout[row][col] not in ("~", "!"):
+    for row in range(min_row, max_row + 1):
+        for col in range(min_col, max_col + 1):
+            if row < 0 or row >= TILE_ROWS or col < 0 or col >= TILE_COLS:
                 continue
 
-            distance = abs(col - start_col) + abs(row - start_row)
-            if best_distance is None or distance < best_distance:
-                best_distance = distance
-                best_target = (row, col)
+            if level[row][col] not in (TILE_WATER, TILE_POISON_WATER):
+                continue
 
-    return best_target
+            tile_rect = (col * TILE_SIZE, row * TILE_SIZE, TILE_SIZE, TILE_SIZE)
+            if CheckCollisionRecs(rect, tile_rect):
+                return row, col, level[row][col]
+
+    return None, None, None
 
 
 def calculate_clean_score(level, total_water_tiles):
@@ -163,42 +157,128 @@ def calculate_clean_score(level, total_water_tiles):
     return round((clean_tiles / total_water_tiles) * 100)
 
 
-class ChemicalPickup:
-    def __init__(self, kind, x, y, target_row, target_col):
+class ChemicalJar:
+    def __init__(self, kind, x, y):
         self.kind = kind
         self.x = x
         self.y = y
-        self.target_row = target_row
-        self.target_col = target_col
-        self.size = 24
+        self.width = JAR_WIDTH
+        self.height = JAR_HEIGHT
+        self.vx = 0.0
+        self.vy = 0.0
+        self.is_grounded = False
+        self.is_broken = False
 
     def get_rect(self):
-        return (
-            self.x - self.size / 2,
-            self.y - self.size / 2,
-            self.size,
-            self.size,
-        )
+        return (self.x, self.y, self.width, self.height)
 
-    def apply(self, level):
+    def try_break(self, level):
+        row, col, _ = find_touching_liquid_tile(self.get_rect(), level)
+        if row is None:
+            return False, 0
+
+        self.is_broken = True
         if self.kind == "poison":
-            return flood_fill_liquid(level, self.target_row, self.target_col, TILE_WATER, TILE_POISON_WATER)
+            changed_tiles = flood_fill_liquid(level, row, col, TILE_WATER, TILE_POISON_WATER)
+        else:
+            changed_tiles = flood_fill_liquid(level, row, col, TILE_POISON_WATER, TILE_WATER)
+        return True, changed_tiles
 
-        return flood_fill_liquid(level, self.target_row, self.target_col, TILE_POISON_WATER, TILE_WATER)
+    def can_move_to(self, level, next_x, next_y):
+        jar_rect = (next_x, next_y, self.width, self.height)
+        return not rect_touches_tile(jar_rect, level, TILE_SOLID)
+
+    def push(self, player, delta_time, level):
+        if self.is_broken or player.vx == 0.0:
+            return
+
+        if not CheckCollisionRecs(player.get_rect(), self.get_rect()):
+            return
+
+        direction = 1 if player.vx > 0 else -1
+        next_x = self.x + direction * JAR_PUSH_SPEED * delta_time
+        if self.can_move_to(level, next_x, self.y):
+            self.x = next_x
+            self.vx = direction * JAR_PUSH_SPEED
+
+    def update(self, delta_time, level):
+        if self.is_broken:
+            return False, 0
+
+        if self.is_grounded:
+            self.vx *= 0.82
+            if abs(self.vx) < 5.0:
+                self.vx = 0.0
+
+        self.vy += GRAVITY * delta_time
+        if self.vy > 1000:
+            self.vy = 1000
+
+        self.is_grounded = False
+
+        self.x += self.vx * delta_time
+        self.handle_tile_collision(level, "X")
+
+        self.y += self.vy * delta_time
+        self.handle_tile_collision(level, "Y")
+
+        self.x = max(0, min(self.x, WORLD_WIDTH - self.width))
+
+        return self.try_break(level)
+
+    def handle_tile_collision(self, level, axis):
+        jar_rect = self.get_rect()
+        px, py, pw, ph = jar_rect
+        min_col = int(px / TILE_SIZE)
+        max_col = int((px + pw) / TILE_SIZE)
+        min_row = int(py / TILE_SIZE)
+        max_row = int((py + ph) / TILE_SIZE)
+
+        for row in range(min_row, max_row + 1):
+            for col in range(min_col, max_col + 1):
+                if row < 0 or row >= TILE_ROWS or col < 0 or col >= TILE_COLS:
+                    continue
+
+                if level[row][col] != TILE_SOLID:
+                    continue
+
+                tile_rect = (col * TILE_SIZE, row * TILE_SIZE, TILE_SIZE, TILE_SIZE)
+                if not CheckCollisionRecs(jar_rect, tile_rect):
+                    continue
+
+                if axis == "X":
+                    if self.vx > 0:
+                        self.x = tile_rect[0] - self.width
+                    elif self.vx < 0:
+                        self.x = tile_rect[0] + TILE_SIZE
+                    self.vx = 0.0
+                else:
+                    if self.vy >= 0:
+                        self.y = tile_rect[1] - self.height
+                        self.is_grounded = True
+                    else:
+                        self.y = tile_rect[1] + TILE_SIZE
+                    self.vy = 0.0
+
+                jar_rect = self.get_rect()
 
     def draw(self):
-        box_color = PURPLE if self.kind == "poison" else GREEN
-        label = b"P" if self.kind == "poison" else b"A"
-        rect = Rectangle(*self.get_rect())
+        if self.is_broken:
+            return
 
-        DrawRectangleRounded(rect, 0.2, 4, box_color)
+        glass_color = PURPLE if self.kind == "poison" else GREEN
+        rect = Rectangle(*self.get_rect())
+        cork_x = int(self.x + self.width * 0.25)
+        cork_y = int(self.y - 4)
+
+        DrawRectangleRounded(rect, 0.2, 4, Fade(glass_color, 0.8))
         DrawRectangleRoundedLines(rect, 0.2, 4, WHITE)
-        DrawText(label, int(self.x - 6), int(self.y - 10), 20, WHITE)
+        DrawRectangle(cork_x, cork_y, int(self.width * 0.5), 6, BROWN)
 
 
 def parse_level(layout):
     level = []
-    pickups = []
+    jars = []
     enemies = []
     spawn_position = make_spawn_position(2, 10, PLAYER_WIDTH, PLAYER_HEIGHT)
     exit_rect = None
@@ -229,10 +309,9 @@ def parse_level(layout):
                 enemy_x, enemy_y = make_spawn_position(col_index, row_index, TILE_SIZE * 0.7, TILE_SIZE * 0.7)
                 enemies.append(Enemy(enemy_x, enemy_y))
             elif symbol in ("P", "A"):
-                target_row, target_col = find_liquid_target(layout, row_index, col_index)
-                center_x, center_y = tile_to_world_center(col_index, row_index)
                 kind = "poison" if symbol == "P" else "antidote"
-                pickups.append(ChemicalPickup(kind, center_x, center_y, target_row, target_col))
+                jar_x, jar_y = make_spawn_position(col_index, row_index, JAR_WIDTH, JAR_HEIGHT)
+                jars.append(ChemicalJar(kind, jar_x, jar_y))
             elif symbol == "X":
                 exit_x = col_index * TILE_SIZE + 6
                 exit_y = row_index * TILE_SIZE + 6
@@ -242,7 +321,7 @@ def parse_level(layout):
 
         level.append(row_tiles)
 
-    return level, spawn_position, pickups, enemies, exit_rect, total_water_tiles
+    return level, spawn_position, jars, enemies, exit_rect, total_water_tiles
 
 
 class Player:
@@ -264,16 +343,6 @@ class Player:
 
     def is_in_liquid(self, level):
         return self.is_touching_tile(level, (TILE_WATER, TILE_POISON_WATER))
-
-    def check_pickup_collection(self, pickups):
-        collected_indices = []
-        player_rect = self.get_rect()
-
-        for index, pickup in enumerate(pickups):
-            if CheckCollisionRecs(player_rect, pickup.get_rect()):
-                collected_indices.append(index)
-
-        return collected_indices
 
     def check_enemy_collision(self, enemies):
         player_rect = self.get_rect()
@@ -500,18 +569,9 @@ def draw_level(level, exit_rect, exit_unlocked):
         DrawText(b"EXIT", int(exit_rect[0] + 5), int(exit_rect[1] + 8), 16, WHITE)
 
 
-def draw_pickups(pickups):
-    for pickup in pickups:
-        pickup.draw()
-
-
-def draw_showcase_labels():
-    for col, row, text in SHOWCASE_LABELS:
-        x = col * TILE_SIZE
-        y = row * TILE_SIZE
-        label = text.encode("utf-8")
-        DrawText(label, x, y, 18, WHITE)
-        DrawText(label, x + 1, y + 1, 18, BLACK)
+def draw_jars(jars):
+    for jar in jars:
+        jar.draw()
 
 
 def update_camera(camera, player):
@@ -533,11 +593,9 @@ def main():
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Amphibi-Man Prototype".encode("utf-8"))
     SetTargetFPS(60)
 
-    game_level, spawn_position, pickups, enemies, exit_rect, total_water_tiles = parse_level(LEVEL_LAYOUT)
+    game_level, spawn_position, jars, enemies, exit_rect, total_water_tiles = parse_level(LEVEL_LAYOUT)
     player = Player(*spawn_position)
     game_state = "PLAYING"
-    status_message = "Mechanic showcase: stomp, poison, clean, swim, then exit."
-    status_timer = 4.0
 
     camera = Camera2D()
     camera.target = Vector2(player.x, player.y)
@@ -545,46 +603,42 @@ def main():
     camera.rotation = 0.0
     camera.zoom = 1.0
 
-    def restart_level(message):
-        nonlocal game_level, spawn_position, pickups, enemies, exit_rect
-        nonlocal total_water_tiles, player, game_state, status_message, status_timer
+    def restart_level():
+        nonlocal game_level, spawn_position, jars, enemies, exit_rect
+        nonlocal total_water_tiles, player, game_state
 
-        game_level, spawn_position, pickups, enemies, exit_rect, total_water_tiles = parse_level(LEVEL_LAYOUT)
+        game_level, spawn_position, jars, enemies, exit_rect, total_water_tiles = parse_level(LEVEL_LAYOUT)
         player = Player(*spawn_position)
         game_state = "PLAYING"
-        status_message = message
-        status_timer = MESSAGE_TIME
         update_camera(camera, player)
 
     while not WindowShouldClose():
         delta_time = GetFrameTime()
 
-        if status_timer > 0:
-            status_timer -= delta_time
-            if status_timer <= 0:
-                status_message = ""
-
         if IsKeyPressed(KEY_R):
-            restart_level("Level reset.")
+            restart_level()
             continue
 
         if IsKeyPressed(KEY_ESCAPE):
             if game_state == "PLAYING":
                 game_state = "PAUSED"
-                status_message = "Paused. Press Esc to resume."
-                status_timer = MESSAGE_TIME
             elif game_state == "PAUSED":
                 game_state = "PLAYING"
-                status_message = "Back in."
-                status_timer = 1.2
 
         if game_state == "PLAYING":
-            enemy_count_before_update = len(enemies)
             player.update(delta_time, game_level)
 
             if player.y > WORLD_HEIGHT or player.is_touching_tile(game_level, TILE_POISON_WATER):
-                restart_level("Poisoned water is unsafe. Restarting room.")
+                restart_level()
                 continue
+
+            active_jars = []
+            for jar in jars:
+                jar.push(player, delta_time, game_level)
+                jar.update(delta_time, game_level)
+                if not jar.is_broken:
+                    active_jars.append(jar)
+            jars = active_jars
 
             for enemy in enemies:
                 enemy.update(delta_time, game_level)
@@ -598,51 +652,17 @@ def main():
                     alive_enemies.append(enemy)
             enemies = alive_enemies
 
-            if poisoned_enemy_count > 0:
-                status_message = f"Poison cleared {poisoned_enemy_count} enemy."
-                if poisoned_enemy_count > 1:
-                    status_message = f"Poison cleared {poisoned_enemy_count} enemies."
-                status_timer = MESSAGE_TIME
-
             hit_type, enemy_index = player.check_enemy_collision(enemies)
             if hit_type == "STOMP":
                 enemies.pop(enemy_index)
                 player.vy = STOMP_BOUNCE
-                status_message = "Enemy stomped."
-                status_timer = 1.4
             elif hit_type == "LETHAL":
-                restart_level("Enemy got you. Restarting room.")
+                restart_level()
                 continue
 
-            collected_indices = player.check_pickup_collection(pickups)
-            for index in sorted(collected_indices, reverse=True):
-                pickup = pickups.pop(index)
-                changed_tiles = pickup.apply(game_level)
-
-                if pickup.kind == "poison":
-                    if changed_tiles > 0:
-                        status_message = f"Poison spread through {changed_tiles} water tiles."
-                    else:
-                        status_message = "That poison vial is not linked to water."
-                else:
-                    if changed_tiles > 0:
-                        status_message = f"Antidote cleaned {changed_tiles} water tiles."
-                    else:
-                        status_message = "Antidote had nothing to clean."
-                status_timer = MESSAGE_TIME
-
-            if enemy_count_before_update > 0 and len(enemies) == 0:
-                status_message = "Exit unlocked."
-                status_timer = MESSAGE_TIME
-
             if exit_rect is not None and CheckCollisionRecs(player.get_rect(), exit_rect):
-                if enemies:
-                    status_message = "Exit locked. Clear every enemy first."
-                    status_timer = MESSAGE_TIME
-                else:
+                if not enemies:
                     game_state = "LEVEL_CLEAR"
-                    status_message = "Level clear."
-                    status_timer = MESSAGE_TIME
 
         update_camera(camera, player)
         clean_score = calculate_clean_score(game_level, total_water_tiles)
@@ -653,8 +673,7 @@ def main():
 
         BeginMode2D(camera)
         draw_level(game_level, exit_rect, exit_unlocked)
-        draw_showcase_labels()
-        draw_pickups(pickups)
+        draw_jars(jars)
 
         for enemy in enemies:
             enemy.draw()
@@ -665,33 +684,19 @@ def main():
         DrawRectangle(0, 0, SCREEN_WIDTH, 76, Fade(BLACK, 0.18))
         enemy_text = f"Enemies: {len(enemies)}".encode("utf-8")
         clean_text = f"Clean Score: {clean_score}%".encode("utf-8")
-        controls_text = b"Move: A/D or Arrows  Jump/Swim: Space/W  Dive: S  Reset: R  Pause: Esc"
         DrawText(enemy_text, 12, 10, 24, BLACK)
         DrawText(clean_text, 12, 36, 22, BLACK)
-        DrawText(controls_text, 250, 14, 18, DARKGRAY)
-
-        if status_message:
-            status_bytes = status_message.encode("utf-8")
-            status_width = MeasureText(status_bytes, 22)
-            status_x = SCREEN_WIDTH / 2 - status_width / 2
-            status_rect = Rectangle(status_x - 14, SCREEN_HEIGHT - 56, status_width + 28, 38)
-            DrawRectangleRounded(status_rect, 0.25, 6, Fade(BLACK, 0.55))
-            DrawText(status_bytes, int(status_x), SCREEN_HEIGHT - 48, 22, WHITE)
 
         if game_state == "PAUSED":
             DrawRectangle(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, Fade(BLACK, 0.45))
             pause_text = b"Paused"
-            help_text = b"Press Esc to resume or R to restart."
             DrawText(pause_text, SCREEN_WIDTH // 2 - MeasureText(pause_text, 40) // 2, 230, 40, WHITE)
-            DrawText(help_text, SCREEN_WIDTH // 2 - MeasureText(help_text, 24) // 2, 280, 24, WHITE)
         elif game_state == "LEVEL_CLEAR":
             DrawRectangle(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, Fade(DARKGREEN, 0.28))
-            clear_text = b"Showcase Clear"
+            clear_text = b"Room Clear"
             score_text = f"Final Clean Score: {clean_score}%".encode("utf-8")
-            replay_text = b"Press R to replay the mechanic showcase."
             DrawText(clear_text, SCREEN_WIDTH // 2 - MeasureText(clear_text, 42) // 2, 220, 42, WHITE)
             DrawText(score_text, SCREEN_WIDTH // 2 - MeasureText(score_text, 28) // 2, 276, 28, WHITE)
-            DrawText(replay_text, SCREEN_WIDTH // 2 - MeasureText(replay_text, 22) // 2, 316, 22, WHITE)
 
         EndDrawing()
 

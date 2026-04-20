@@ -108,3 +108,19 @@ Turn the base scene into a mechanic showcase instead of treating it like the fir
 Next/TODO:
 *Break the showcase into separate authored levels later
 *Add clearer signage, visuals, and level transitions
+
+
+
+### Date: 04/19/2026, Prototype Feature 5
+**Goal**
+Simplify the presentation and switch chemicals from pickups to physical jars.
+
+**Implementation**
+*Technical Plan/Credit*: Removed the showcase text layer, rebuilt the mechanic beats around short ledges, and replaced poison/antidote pickups with pushable jars that fall, shatter on liquid contact, and trigger the flood-fill system.
+*Content Credit*: Self implemented from the updated gameplay direction.
+
+**Commit message** Replace chemical pickups with breakable jars
+
+Next/TODO:
+*Add jar break particles and sound
+*Improve jar pushing so it feels more solid against the player body
