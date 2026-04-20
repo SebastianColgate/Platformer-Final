@@ -345,11 +345,16 @@ class ChemicalJar:
         if self.is_broken:
             return
 
-        glass_color = PURPLE if self.kind == "poison" else GREEN
-        rect = Rectangle(*self.get_rect())
-        cork_x = int(self.x + self.width * 0.25)
-        cork_y = int(self.y - 4)
+        box_x = int(self.x)
+        box_y = int(self.y)
+        box_w = int(self.width)
+        box_h = int(self.height)
 
-        DrawRectangleRounded(rect, 0.2, 4, Fade(glass_color, 0.8))
-        DrawRectangleRoundedLines(rect, 0.2, 4, WHITE)
-        DrawRectangle(cork_x, cork_y, int(self.width * 0.5), 6, BROWN)
+        if self.kind == "poison":
+            DrawRectangle(box_x, box_y, box_w, box_h, PURPLE)
+            DrawRectangleLines(box_x, box_y, box_w, box_h, WHITE)
+            DrawText(b"P", box_x + box_w // 2 - 6, box_y + box_h // 2 - 10, 22, WHITE)
+        else:
+            DrawRectangle(box_x, box_y, box_w, box_h, LIGHTGRAY)
+            DrawRectangleLines(box_x, box_y, box_w, box_h, GREEN)
+            DrawText(b"+", box_x + box_w // 2 - 7, box_y + box_h // 2 - 12, 26, GREEN)

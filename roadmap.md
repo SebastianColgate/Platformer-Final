@@ -140,3 +140,19 @@ Refactor the prototype into a few simple files without turning it into an overbu
 Next/TODO:
 *Keep future features in the same simple structure
 *Avoid overengineering unless the class project actually needs it
+
+
+
+### Date: 04/19/2026, Prototype Feature 7
+**Goal**
+Simplify the chemical jar visuals into plain placeholder shapes.
+
+**Implementation**
+*Technical Plan/Credit*: Replaced the bottle-like placeholder art with simple square markers: poison is a square with a `P`, and antidote is a square with a green `+`.
+*Content Credit*: Self implemented placeholder UI art.
+
+**Commit message** Simplify chemical jar placeholder art
+
+Next/TODO:
+*Swap placeholder squares for real sprites later
+*Add break feedback when jars shatter into liquid
