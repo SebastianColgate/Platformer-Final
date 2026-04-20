@@ -3,7 +3,7 @@ from raylib import *
 from pyray import *
 
 from entities import Player
-from help import calculate_clean_score
+from helpers import calculate_clean_score
 from settings import (
     LEVEL_LAYOUT,
     SCREEN_HEIGHT,

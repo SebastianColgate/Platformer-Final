@@ -1,5 +1,5 @@
 from entities import ChemicalJar, Enemy
-from help import make_spawn_position
+from helpers import make_spawn_position
 from settings import (
     JAR_HEIGHT,
     JAR_WIDTH,

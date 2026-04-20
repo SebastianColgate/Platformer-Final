@@ -1,7 +1,7 @@
 from raylib import *
 from pyray import *
 
-from help import find_touching_liquid_tile, flood_fill_liquid, rect_touches_tile
+from helpers import find_touching_liquid_tile, flood_fill_liquid, rect_touches_tile
 from settings import (
     ENEMY_SPEED,
     EXIT_LIQUID_VELOCITY,
