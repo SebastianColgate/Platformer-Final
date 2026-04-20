@@ -92,3 +92,19 @@ Add the first version of the actual room-complete loop.
 Next/TODO:
 *Persist clean score between rooms
 *Replace rectangle placeholders with sprites and better UI art
+
+
+
+### Date: 04/19/2026, Prototype Feature 4
+**Goal**
+Turn the base scene into a mechanic showcase instead of treating it like the first real level.
+
+**Implementation**
+*Technical Plan/Credit*: Rebuilt the layout as a left-to-right sequence that introduces stomp combat, poison flood-fill, antidote cleanup, and a swim-to-exit finish one mechanic at a time.
+*Content Credit*: Self implemented from the project goals and sketch direction.
+
+**Commit message** Convert prototype room into mechanic showcase
+
+Next/TODO:
+*Break the showcase into separate authored levels later
+*Add clearer signage, visuals, and level transitions

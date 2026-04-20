@@ -29,25 +29,34 @@ TILE_POISON_WATER = 3
 
 # --- Level Layout ---
 # Legend:
-# . = air, # = solid, ~ = clean water
-# S = player spawn, E = enemy, P = poison pickup
-# A = antidote pickup, X = exit
+# . = air, # = solid, ~ = clean water, ! = poisoned water
+# S = player spawn, E = land enemy, e = enemy starting in water
+# P = poison pickup, A = antidote pickup, X = exit
 LEVEL_LAYOUT = [
-    "................................",
-    "............................X...",
-    ".........................####...",
-    ".........................#~~#...",
-    "....P....................#~~#...",
-    "...###...................#~~#...",
-    ".........................#A~#...",
-    "...............#####.....#~~#...",
-    ".........................#~~#...",
-    "..........#####..........#~~#...",
-    "..S..E..................##~~##..",
-    "######.................##~~~~##.",
-    ".......................##~E~~##.",
-    ".............##################.",
-    "################################",
+    "........................................",
+    "........................................",
+    "........................................",
+    "........................................",
+    "........................................",
+    "...................................X....",
+    ".................................#####..",
+    "........................................",
+    "..............................!!!.......",
+    "..............................!!!.......",
+    "..............................!!!.......",
+    "................#~~~#.........!!!.......",
+    "................#~e~#.........!!!.......",
+    "..S...E.......P.#####.....A...!!!.......",
+    "########################################",
+]
+
+SHOWCASE_LABELS = [
+    (2, 12, "Start"),
+    (5, 11, "Stomp enemy"),
+    (14, 11, "Poison demo"),
+    (26, 11, "Clean water"),
+    (31, 7, "Swim up"),
+    (34, 4, "Exit"),
 ]
 
 assert LEVEL_LAYOUT, "LEVEL_LAYOUT must not be empty."
@@ -183,7 +192,7 @@ class ChemicalPickup:
         rect = Rectangle(*self.get_rect())
 
         DrawRectangleRounded(rect, 0.2, 4, box_color)
-        DrawRectangleRoundedLines(rect, 0.2, 4, 2, WHITE)
+        DrawRectangleRoundedLines(rect, 0.2, 4, WHITE)
         DrawText(label, int(self.x - 6), int(self.y - 10), 20, WHITE)
 
 
@@ -203,7 +212,7 @@ def parse_level(layout):
 
             if symbol == "#":
                 tile = TILE_SOLID
-            elif symbol == "~":
+            elif symbol in ("~", "e"):
                 tile = TILE_WATER
             elif symbol == "!":
                 tile = TILE_POISON_WATER
@@ -214,6 +223,9 @@ def parse_level(layout):
             if symbol == "S":
                 spawn_position = make_spawn_position(col_index, row_index, PLAYER_WIDTH, PLAYER_HEIGHT)
             elif symbol == "E":
+                enemy_x, enemy_y = make_spawn_position(col_index, row_index, TILE_SIZE * 0.7, TILE_SIZE * 0.7)
+                enemies.append(Enemy(enemy_x, enemy_y))
+            elif symbol == "e":
                 enemy_x, enemy_y = make_spawn_position(col_index, row_index, TILE_SIZE * 0.7, TILE_SIZE * 0.7)
                 enemies.append(Enemy(enemy_x, enemy_y))
             elif symbol in ("P", "A"):
@@ -484,13 +496,22 @@ def draw_level(level, exit_rect, exit_unlocked):
         exit_color = GREEN if exit_unlocked else MAROON
         rect = Rectangle(*exit_rect)
         DrawRectangleRounded(rect, 0.15, 4, exit_color)
-        DrawRectangleRoundedLines(rect, 0.15, 4, 3, WHITE)
+        DrawRectangleRoundedLines(rect, 0.15, 4, WHITE)
         DrawText(b"EXIT", int(exit_rect[0] + 5), int(exit_rect[1] + 8), 16, WHITE)
 
 
 def draw_pickups(pickups):
     for pickup in pickups:
         pickup.draw()
+
+
+def draw_showcase_labels():
+    for col, row, text in SHOWCASE_LABELS:
+        x = col * TILE_SIZE
+        y = row * TILE_SIZE
+        label = text.encode("utf-8")
+        DrawText(label, x, y, 18, WHITE)
+        DrawText(label, x + 1, y + 1, 18, BLACK)
 
 
 def update_camera(camera, player):
@@ -515,7 +536,7 @@ def main():
     game_level, spawn_position, pickups, enemies, exit_rect, total_water_tiles = parse_level(LEVEL_LAYOUT)
     player = Player(*spawn_position)
     game_state = "PLAYING"
-    status_message = "Collect chemicals, clear enemies, then reach the exit."
+    status_message = "Mechanic showcase: stomp, poison, clean, swim, then exit."
     status_timer = 4.0
 
     camera = Camera2D()
@@ -632,6 +653,7 @@ def main():
 
         BeginMode2D(camera)
         draw_level(game_level, exit_rect, exit_unlocked)
+        draw_showcase_labels()
         draw_pickups(pickups)
 
         for enemy in enemies:
@@ -664,9 +686,9 @@ def main():
             DrawText(help_text, SCREEN_WIDTH // 2 - MeasureText(help_text, 24) // 2, 280, 24, WHITE)
         elif game_state == "LEVEL_CLEAR":
             DrawRectangle(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, Fade(DARKGREEN, 0.28))
-            clear_text = b"Level Clear"
+            clear_text = b"Showcase Clear"
             score_text = f"Final Clean Score: {clean_score}%".encode("utf-8")
-            replay_text = b"Press R to replay the prototype room."
+            replay_text = b"Press R to replay the mechanic showcase."
             DrawText(clear_text, SCREEN_WIDTH // 2 - MeasureText(clear_text, 42) // 2, 220, 42, WHITE)
             DrawText(score_text, SCREEN_WIDTH // 2 - MeasureText(score_text, 28) // 2, 276, 28, WHITE)
             DrawText(replay_text, SCREEN_WIDTH // 2 - MeasureText(replay_text, 22) // 2, 316, 22, WHITE)
