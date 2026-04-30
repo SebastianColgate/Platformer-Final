@@ -146,3 +146,63 @@ Replace the mechanic test room with a real demo level layout.
 Next/TODO:  
 * Playtest jumps, jar pushes, and enemy placement for difficulty  
 * Make main level 2
+
+
+
+### Date: 04/39/2026, in lab
+**Goal**
+Created sprites for jumping, swimming, animations, door, etc
+
+**Implementation**
+*Technical Plan/Credit*: First generated, then touched up and resized and edited in photopea and asperite
+*Content Credit*: Generated
+
+Next/TODO:
+* implement actual animation. Will likely not use a sprite sheet as images are not generated in exact sizes and frames
+
+
+
+
+### Date: 04/29/2026
+**Goal**
+Standardized and resized many entities, to help tune both gameplay and sprite work/animation
+
+**Implementation**
+*Technical Plan/Credit*: Self implemented, really just changed constants
+*Content Credit*: Self implemented.
+
+
+
+
+### Date: 04/30/2026
+**Goal**
+Implemented animtions for walking and swimming, as well as basic enemy animation
+
+**Implementation**
+*Technical Plan/Credit*: Self implemented, note did not use sprite sheet as all sprites are different sizes and dont exactly match
+*Content Credit*: Self implemented.
+
+
+
+### Date: 04/30/2026
+**Goal**
+Updated and expanded UI, to include timer and level title, with a little animation
+
+**Implementation**
+*Technical Plan/Credit*: Self implemented using pyrays text features
+*Content Credit*: Self implemented.
+
+
+### Date: 04/30/2026
+**Goal**
+Fixed collisionn for changing swim mode hitbox issue when enteiring water
+
+**Implementation**
+*Technical Plan/Credit*: Self implemented 
+*Content Credit*: Self implemented.
+
+
+
+
+
+

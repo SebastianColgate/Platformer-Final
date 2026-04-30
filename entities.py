@@ -7,7 +7,6 @@ from settings import (
     EXIT_LIQUID_VELOCITY,
     GRAVITY,
     JAR_HEIGHT,
-    JAR_PUSH_SPEED,
     JAR_WIDTH,
     JUMP_VELOCITY,
     MOVING_PLATFORM_HEIGHT,
@@ -29,7 +28,7 @@ from settings import (
     WORLD_HEIGHT,
     WORLD_WIDTH,
 )
-from sprites import draw_sprite
+from sprites import draw_sprite, draw_sprite_keep_height
 
 
 
@@ -50,35 +49,75 @@ class Player:
         self.is_swimming = False
         self.facing_right = True
         self.stomp_bounce = STOMP_BOUNCE
+        
+        self.animation_timer = 0.0
+        self.animation_frame = 0
+        self.swim_kick_timer = 0.0
+        self.is_pushing = False
 
     def get_rect(self):
         return (self.x, self.y, self.width, self.height)
 
 
-    #MEGA BUGGED NEED FIX
-    def change_swim_mode(self, swimming):
+    def get_liquid_sensor_rect(self):
+        sensor_width = TILE_SIZE * 0.5
+        sensor_height = TILE_SIZE * 0.5
+        center_x = self.x + self.width / 2
+        bottom_y = self.y + self.height
+        return (
+            center_x - sensor_width / 2,
+            bottom_y - sensor_height,
+            sensor_width,
+            sensor_height,
+        )
+
+    def change_swim_mode(self, swimming, level=None):
         if self.is_swimming == swimming:
             return
 
         old_center_x = self.x + self.width / 2
         old_bottom = self.y + self.height
-        self.is_swimming = swimming
 
-        if self.is_swimming:
-            self.width = PLAYER_SWIM_WIDTH
-            self.height = PLAYER_SWIM_HEIGHT
+        if swimming:
+            new_width = PLAYER_SWIM_WIDTH
+            new_height = PLAYER_SWIM_HEIGHT
         else:
-            self.width = PLAYER_WIDTH
-            self.height = PLAYER_HEIGHT
+            new_width = PLAYER_WIDTH
+            new_height = PLAYER_HEIGHT
 
-        self.x = old_center_x - self.width / 2
-        self.y = old_bottom - self.height
+        new_x = old_center_x - new_width / 2
+        new_y = old_bottom - new_height
+
+        if level is not None:
+            found_safe_spot = False
+            test_offsets = [0]
+            for offset in range(2, TILE_SIZE + 1, 2):
+                test_offsets.append(-offset)
+                test_offsets.append(offset)
+
+            for offset in test_offsets:
+                test_x = new_x + offset
+                test_x = max(0, min(test_x, WORLD_WIDTH - new_width))
+                test_rect = (test_x, new_y, new_width, new_height)
+                if not rect_touches_tile(test_rect, level, TILE_SOLID):
+                    new_x = test_x
+                    found_safe_spot = True
+                    break
+
+            if not found_safe_spot:
+                return
+
+        self.is_swimming = swimming
+        self.width = new_width
+        self.height = new_height
+        self.x = new_x
+        self.y = new_y
 
     def is_touching_tile(self, level, tile_type):
         return rect_touches_tile(self.get_rect(), level, tile_type)
 
     def is_in_liquid(self, level):
-        return self.is_touching_tile(level, (TILE_WATER, TILE_POISON_WATER))
+        return rect_touches_tile(self.get_liquid_sensor_rect(), level, (TILE_WATER, TILE_POISON_WATER))
 
     def check_enemy_collision(self, enemies):
         player_rect = self.get_rect()
@@ -100,17 +139,21 @@ class Player:
         if solid_objects is None:
             solid_objects = []
 
+        self.is_pushing = False
 
         #changes mode on liquid state change
         was_in_liquid = self.is_swimming
-        self.change_swim_mode(self.is_in_liquid(level))
+        self.change_swim_mode(self.is_in_liquid(level), level)
 
         self.vx = 0.0
         current_speed = SWIM_SPEED if self.is_swimming else PLAYER_SPEED
 
-        if IsKeyDown(KEY_LEFT) or IsKeyDown(KEY_A):
+        moving_left = IsKeyDown(KEY_LEFT) or IsKeyDown(KEY_A)
+        moving_right = IsKeyDown(KEY_RIGHT) or IsKeyDown(KEY_D)
+
+        if moving_left:
             self.vx = -current_speed
-        if IsKeyDown(KEY_RIGHT) or IsKeyDown(KEY_D):
+        if moving_right:
             self.vx = current_speed
         if self.vx < 0:
             self.facing_right = False
@@ -123,9 +166,15 @@ class Player:
 
         #water updates
         if self.is_swimming:
-            if IsKeyDown(KEY_SPACE) or IsKeyDown(KEY_UP) or IsKeyDown(KEY_W):
+            swim_up_pressed = IsKeyPressed(KEY_SPACE) or IsKeyPressed(KEY_UP) or IsKeyPressed(KEY_W)
+            swim_down_held = IsKeyDown(KEY_DOWN) or IsKeyDown(KEY_S)
+
+            if moving_left or moving_right or swim_up_pressed or swim_down_held:
+                self.swim_kick_timer = 0.25
+
+            if swim_up_pressed:
                 self.vy = SWIM_VELOCITY
-            elif IsKeyDown(KEY_DOWN) or IsKeyDown(KEY_S):
+            elif swim_down_held:
                 self.vy = SWIM_SPEED
             else:
                 self.vy *= 0.9
@@ -155,9 +204,33 @@ class Player:
         self.x = max(0, min(self.x, WORLD_WIDTH - self.width))
         self.y = min(self.y, WORLD_HEIGHT + TILE_SIZE)
 
-        self.change_swim_mode(self.is_in_liquid(level))
+        self.change_swim_mode(self.is_in_liquid(level), level)
         if was_in_liquid and not self.is_swimming and self.vy < 0:
             self.vy = EXIT_LIQUID_VELOCITY
+
+        if self.swim_kick_timer > 0:
+            self.swim_kick_timer -= delta_time
+
+        self.update_animation(delta_time)
+
+
+    def update_animation(self, delta_time):
+        if self.is_swimming:
+            is_moving = self.swim_kick_timer > 0
+            frame_time = 0.3
+        else:
+            is_moving = self.is_grounded and abs(self.vx) > 1
+            frame_time = 0.18
+
+        if not is_moving:
+            self.animation_timer = 0.0
+            self.animation_frame = 0
+            return
+
+        self.animation_timer += delta_time
+        if self.animation_timer >= frame_time:
+            self.animation_timer = 0.0
+            self.animation_frame = 1 - self.animation_frame
 
    
     def handle_tile_collision(self, level, axis):
@@ -229,10 +302,26 @@ class Player:
             player_rect = self.get_rect()
 
     def draw(self):
+        center_x = self.x + self.width / 2
+        bottom_y = self.y + self.height
+
         if self.is_swimming:
-            draw_sprite("player_swim", self.x, self.y, self.width, self.height, not self.facing_right)
+            swim_rotation = -10.0 if self.facing_right else 10.0
+            if self.animation_frame == 0:
+                draw_sprite_keep_height("player_swim_idle", center_x, bottom_y, self.height, not self.facing_right, swim_rotation)
+            else:
+                draw_sprite_keep_height("player_swim_kick", center_x, bottom_y, self.height, not self.facing_right, swim_rotation)
+        elif not self.is_grounded:
+            draw_width = self.height * 0.65
+            draw_x = self.x + (self.width - draw_width) / 2
+            draw_sprite("player_jump", draw_x, self.y, draw_width, self.height, not self.facing_right)
+        elif abs(self.vx) > 1 or self.is_pushing:
+            if self.animation_frame == 0:
+                draw_sprite_keep_height("player_stand", center_x, bottom_y, self.height, not self.facing_right)
+            else:
+                draw_sprite_keep_height("player_walk", center_x, bottom_y, self.height, not self.facing_right)
         else:
-            draw_sprite("player_stand", self.x, self.y, self.width, self.height, not self.facing_right)
+            draw_sprite_keep_height("player_stand", center_x, bottom_y, self.height, not self.facing_right)
 
     def reset(self):
         self.x = self.start_x
@@ -244,6 +333,10 @@ class Player:
         self.is_grounded = False
         self.is_swimming = False
         self.facing_right = True
+        self.animation_timer = 0.0
+        self.animation_frame = 0
+        self.swim_kick_timer = 0.0
+        self.is_pushing = False
 
 class Enemy:
     def __init__(self, x, y, kind="land"):
@@ -257,6 +350,8 @@ class Enemy:
         self.vx = ENEMY_SPEED
         self.vy = 0.0
         self.is_grounded = False
+        self.animation_timer = 0.0
+        self.animation_frame = 0
 
     def get_rect(self):
         return (self.x, self.y, self.width, self.height)
@@ -288,6 +383,10 @@ class Enemy:
     def update_water_enemy(self, delta_time, level):
         # Water enemies float/swim instead of falling.
         self.vy = 0.0
+        self.animation_timer += delta_time
+        if self.animation_timer >= 0.45:
+            self.animation_timer = 0.0
+            self.animation_frame = 1 - self.animation_frame
 
         self.x += self.vx * delta_time
 
@@ -337,7 +436,14 @@ class Enemy:
                 enemy_rect = self.get_rect()
 
     def draw(self):
-        draw_sprite("enemy", self.x, self.y, self.width, self.height)
+        flip_x = self.vx < 0
+        if self.kind == "water":
+            if self.animation_frame == 0:
+                draw_sprite("water_enemy_1", self.x, self.y, self.width, self.height, flip_x)
+            else:
+                draw_sprite("water_enemy_2", self.x, self.y, self.width, self.height, flip_x)
+        else:
+            draw_sprite("enemy", self.x, self.y, self.width, self.height, flip_x)
 
 
 #New, needs collision work
@@ -415,8 +521,7 @@ class MovingPlatform:
                 obj.y += self.dy
 
     def draw(self):
-        DrawRectangle(int(self.x), int(self.y), int(self.width), int(self.height), GRAY)
-        DrawRectangleLines(int(self.x), int(self.y), int(self.width), int(self.height), DARKGRAY)
+        draw_sprite("moving_platform", self.x, self.y, self.width, self.height)
 
 
 class ChemicalJar:
@@ -458,20 +563,22 @@ class ChemicalJar:
             return
 
         direction = 1 if player.vx > 0 else -1
-        push_speed = max(abs(player.vx), JAR_PUSH_SPEED)
+        push_speed = abs(player.vx)
 
         next_x = self.x + direction * push_speed * delta_time
         next_rect = (next_x, self.y, self.width, self.height)
 
         if not rect_touches_tile(next_rect, level, TILE_SOLID):
             self.x = next_x
-            self.vx = direction * push_speed
+
+        self.vx = 0.0
 
         if direction > 0:
             player.x = self.x - player.width
         else:
             player.x = self.x + self.width
 
+        player.is_pushing = True
         player.vx = 0.0
 
 

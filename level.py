@@ -1,6 +1,8 @@
 from entities import ChemicalJar, Enemy, MovingPlatform
 from helpers import make_spawn_position
 from settings import (
+    DOOR_HEIGHT,
+    DOOR_WIDTH,
     JAR_HEIGHT,
     JAR_WIDTH,
     MOVING_PLATFORM_SPEED,
@@ -49,7 +51,7 @@ def parse_level(layout):
             if symbol == "S":
                 spawn_position = make_spawn_position(col_index, row_index, PLAYER_WIDTH, PLAYER_HEIGHT)
             elif symbol in ("E", "e"):
-                enemy_x, enemy_y = make_spawn_position(col_index, row_index, TILE_SIZE * 0.7, TILE_SIZE * 0.7)
+                enemy_x, enemy_y = make_spawn_position(col_index, row_index, TILE_SIZE * 0.9, TILE_SIZE * 0.9)
 
                 if symbol == "e":
                     enemies.append(Enemy(enemy_x, enemy_y, "water"))
@@ -60,9 +62,11 @@ def parse_level(layout):
                 jar_x, jar_y = make_spawn_position(col_index, row_index, JAR_WIDTH, JAR_HEIGHT)
                 jars.append(ChemicalJar(kind, jar_x, jar_y))
             elif symbol == "X":
-                exit_x = col_index * TILE_SIZE + 6
-                exit_y = row_index * TILE_SIZE + 6
-                exit_rect = (exit_x, exit_y, TILE_SIZE - 12, TILE_SIZE - 12)
+                tile_center_x = col_index * TILE_SIZE + TILE_SIZE / 2
+                tile_bottom_y = (row_index + 1) * TILE_SIZE
+                exit_x = tile_center_x - DOOR_WIDTH / 2
+                exit_y = tile_bottom_y - DOOR_HEIGHT
+                exit_rect = (exit_x, exit_y, DOOR_WIDTH, DOOR_HEIGHT)
 
             row_tiles.append(tile)
 
