@@ -11,6 +11,13 @@ def make_spawn_position(col, row, width, height):
     return x, y
 
 
+def format_level_time(seconds):
+    minutes = int(seconds // 60)
+    whole_seconds = int(seconds % 60)
+    hundredths = int((seconds - int(seconds)) * 100)
+    return f"{minutes:02}:{whole_seconds:02}.{hundredths:02}"
+
+
 def rect_touches_tile(rect, level, tile_types):
     if isinstance(tile_types, int):
         tile_types = {tile_types}

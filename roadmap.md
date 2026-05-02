@@ -204,5 +204,61 @@ Fixed collisionn for changing swim mode hitbox issue when enteiring water
 
 
 
+### Date: 05/01/2026
+**Goal**
+Add a main menu before the game starts
+
+**Implementation**
+*Technical Plan/Credit*: Added a simple menu state with start and controls options. 
+*Content Credit*: Self implemented, largely drawn and based off other menus from midterm
+
+Next/TODO:
+* Polish menu visuals if time allows
+
+
+
+### Date: 05/01/2026
+**Goal**
+Add a player animation system for the menu
+
+**Implementation**
+*Technical Plan/Credit*: Added a small menu scene that simulates the real player for animation, largely by adding controls to the player update, meaning the menu player uses the actual player movement
+*Content Credit*: Self implemented
+
+
+
+### Date: 05/01/2026
+**Goal**
+Add multi-level handling
+
+**Implementation**
+*Technical Plan/Credit*: Changed the game so it can store multiple level definitions and load them one after another. Finishing the first level now moves into the second level, and added simple way to track results of each level
+*Content Credit*: Self implemented.
+
+Next/TODO:
+* Finish actual level design and playtesting
+
+
+
+### Date: 05/01/2026
+**Goal**
+Add debug key for clearing enemies
+
+**Implementation**
+*Technical Plan/Credit*: Added an F2 debug key thta kills all enemies
+*Content Credit*: Self implemented.
+
+
+
+### Date: 05/01/2026
+**Goal**
+Bug fix around moving platform collision with jars and the player
+
+**Implementation**
+*Technical Plan/Credit*: Fixed more moving platform collision issues. Platforms now push the player from the side instead of passing through them, jars can be carried by moving platforms, and the player can be carried when standing on jars that are on moving platforms.
+*Content Credit*: Self implemented.
+
+
+
 
 

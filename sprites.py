@@ -10,6 +10,7 @@ def load_sprites():
     texture_folder = os.path.join(os.path.dirname(__file__), "textures")
     files = {
         "background": "background.png",
+        "menu_background": "menu_background.png",
         "player": "player.png",
         "player_stand": "Player Standing.png",
         "player_walk": "player_walking.png",

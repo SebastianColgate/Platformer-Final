@@ -17,7 +17,7 @@ from settings import (
 )
 
 
-def parse_level(layout):
+def parse_level(layout, moving_platform_data=None):
     """
     Parses the level map, extracts dynamic entities, and returns the
     tile collision map plus the objects that need to be spawn from the layout.
@@ -72,7 +72,10 @@ def parse_level(layout):
 
         level.append(row_tiles)
 
-    for platform_data in MOVING_PLATFORMS:
+    if moving_platform_data is None:
+        moving_platform_data = MOVING_PLATFORMS
+
+    for platform_data in moving_platform_data:
         start_col, start_row, end_col, end_row, width_tiles = platform_data
         start_x = start_col * TILE_SIZE
         start_y = start_row * TILE_SIZE

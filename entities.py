@@ -71,9 +71,21 @@ class Player:
             sensor_height,
         )
 
-    def change_swim_mode(self, swimming, level=None):
+    def rect_touches_solid_object(self, rect, solid_objects):
+        for obj in solid_objects:
+            if getattr(obj, "is_broken", False):
+                continue
+            if CheckCollisionRecs(rect, obj.get_rect()):
+                return True
+
+        return False
+
+    def change_swim_mode(self, swimming, level=None, solid_objects=None):
         if self.is_swimming == swimming:
             return
+
+        if solid_objects is None:
+            solid_objects = []
 
         old_center_x = self.x + self.width / 2
         old_bottom = self.y + self.height
@@ -89,6 +101,10 @@ class Player:
         new_y = old_bottom - new_height
 
         if level is not None:
+            starting_rect = (new_x, new_y, new_width, new_height)
+            if self.rect_touches_solid_object(starting_rect, solid_objects):
+                return
+
             found_safe_spot = False
             test_offsets = [0]
             for offset in range(2, TILE_SIZE + 1, 2):
@@ -99,7 +115,10 @@ class Player:
                 test_x = new_x + offset
                 test_x = max(0, min(test_x, WORLD_WIDTH - new_width))
                 test_rect = (test_x, new_y, new_width, new_height)
-                if not rect_touches_tile(test_rect, level, TILE_SOLID):
+                touches_tile = rect_touches_tile(test_rect, level, TILE_SOLID)
+                touches_object = self.rect_touches_solid_object(test_rect, solid_objects)
+
+                if not touches_tile and not touches_object:
                     new_x = test_x
                     found_safe_spot = True
                     break
@@ -135,21 +154,32 @@ class Player:
         return None, -1
 
 
-    def update(self, delta_time, level, solid_objects=None):
+    def update(self, delta_time, level, solid_objects=None, controls=None):
         if solid_objects is None:
             solid_objects = []
+
+#ADDED for animation of menu
+        if controls is None:
+            moving_left = IsKeyDown(KEY_LEFT) or IsKeyDown(KEY_A)
+            moving_right = IsKeyDown(KEY_RIGHT) or IsKeyDown(KEY_D)
+            jump_pressed = IsKeyPressed(KEY_SPACE) or IsKeyPressed(KEY_UP)
+            swim_up_pressed = IsKeyPressed(KEY_SPACE) or IsKeyPressed(KEY_UP) or IsKeyPressed(KEY_W)
+            swim_down_held = IsKeyDown(KEY_DOWN) or IsKeyDown(KEY_S)
+        else:
+            moving_left = controls.get("left", False)
+            moving_right = controls.get("right", False)
+            jump_pressed = controls.get("jump", False)
+            swim_up_pressed = controls.get("swim_up", False)
+            swim_down_held = controls.get("swim_down", False)
 
         self.is_pushing = False
 
         #changes mode on liquid state change
         was_in_liquid = self.is_swimming
-        self.change_swim_mode(self.is_in_liquid(level), level)
+        self.change_swim_mode(self.is_in_liquid(level), level, solid_objects)
 
         self.vx = 0.0
         current_speed = SWIM_SPEED if self.is_swimming else PLAYER_SPEED
-
-        moving_left = IsKeyDown(KEY_LEFT) or IsKeyDown(KEY_A)
-        moving_right = IsKeyDown(KEY_RIGHT) or IsKeyDown(KEY_D)
 
         if moving_left:
             self.vx = -current_speed
@@ -166,9 +196,6 @@ class Player:
 
         #water updates
         if self.is_swimming:
-            swim_up_pressed = IsKeyPressed(KEY_SPACE) or IsKeyPressed(KEY_UP) or IsKeyPressed(KEY_W)
-            swim_down_held = IsKeyDown(KEY_DOWN) or IsKeyDown(KEY_S)
-
             if moving_left or moving_right or swim_up_pressed or swim_down_held:
                 self.swim_kick_timer = 0.25
 
@@ -185,7 +212,7 @@ class Player:
         
         #land updates
         else:
-            if (IsKeyPressed(KEY_SPACE) or IsKeyPressed(KEY_UP)) and self.is_grounded:
+            if jump_pressed and self.is_grounded:
                 self.vy = JUMP_VELOCITY
 
             self.vy += GRAVITY * delta_time
@@ -204,7 +231,7 @@ class Player:
         self.x = max(0, min(self.x, WORLD_WIDTH - self.width))
         self.y = min(self.y, WORLD_HEIGHT + TILE_SIZE)
 
-        self.change_swim_mode(self.is_in_liquid(level), level)
+        self.change_swim_mode(self.is_in_liquid(level), level, solid_objects)
         if was_in_liquid and not self.is_swimming and self.vy < 0:
             self.vy = EXIT_LIQUID_VELOCITY
 
@@ -381,6 +408,7 @@ class Enemy:
         self.x = max(0, min(self.x, WORLD_WIDTH - self.width))
 
     def update_water_enemy(self, delta_time, level):
+        
         # Water enemies float/swim instead of falling.
         self.vy = 0.0
         self.animation_timer += delta_time
@@ -390,7 +418,7 @@ class Enemy:
 
         self.x += self.vx * delta_time
 
-        # If it hits a wall, turn around.
+        # turns on wall
         if rect_touches_tile(self.get_rect(), level, TILE_SOLID):
             self.x -= self.vx * delta_time
             self.vx *= -1
@@ -446,7 +474,6 @@ class Enemy:
             draw_sprite("enemy", self.x, self.y, self.width, self.height, flip_x)
 
 
-#New, needs collision work
 class MovingPlatform:
     def __init__(self, start_x, start_y, end_x, end_y, width, speed):
         self.start_x = start_x
@@ -483,10 +510,56 @@ class MovingPlatform:
         is_on_top = old_y - 3 <= obj_bottom <= old_y + 5
         return overlaps_x and is_on_top
 
-    #basically just moves back and forth, checking when it should switch
+    def is_standing_on(self, obj, support_rect):
+        if getattr(obj, "is_broken", False):
+            return False
+
+        obj_x, obj_y, obj_width, obj_height = obj.get_rect()
+        support_x, support_y, support_width, support_height = support_rect
+        obj_bottom = obj_y + obj_height
+
+        overlaps_x = obj_x + obj_width > support_x and obj_x < support_x + support_width
+        is_on_top = support_y - 3 <= obj_bottom <= support_y + 5
+        return overlaps_x and is_on_top
+
+    def push_side_collision(self, obj, old_x, old_y, old_obj_rect):
+        if getattr(obj, "is_broken", False):
+            return
+
+        if not CheckCollisionRecs(obj.get_rect(), self.get_rect()):
+            return
+
+        obj_x, obj_y, obj_width, obj_height = obj.get_rect()
+        obj_bottom = obj_y + obj_height
+        was_above = old_y - 3 <= obj_bottom <= old_y + 5
+        if was_above:
+            return
+
+        old_obj_x, old_obj_y, old_obj_width, old_obj_height = old_obj_rect
+        old_obj_right = old_obj_x + old_obj_width
+        old_platform_right = old_x + self.width
+        platform_center = self.x + self.width / 2
+        obj_center = obj_x + obj_width / 2
+
+        if old_obj_right <= old_x:
+            obj.x = self.x - obj_width
+        elif old_obj_x >= old_platform_right:
+            obj.x = self.x + self.width
+        elif obj_center < platform_center:
+            obj.x = self.x - obj_width
+        else:
+            obj.x = self.x + self.width
+
+        if hasattr(obj, "vx"):
+            obj.vx = 0.0
+
+    #Essentially just moves back and forth, checking when it should switch
     def update(self, delta_time, riders):
         old_x = self.x
         old_y = self.y
+        old_rider_rects = {}
+        for obj in riders:
+            old_rider_rects[obj] = obj.get_rect()
 
         if self.start_x != self.end_x:
             self.x += self.direction * self.speed * delta_time
@@ -514,11 +587,29 @@ class MovingPlatform:
         self.dx = self.x - old_x
         self.dy = self.y - old_y
 
-        #Makes things on it move with it
+        #Makes things on it move with it, was a bug 
+        carried_riders = []
         for obj in riders:
             if self.is_carrying(obj, old_x, old_y):
                 obj.x += self.dx
                 obj.y += self.dy
+                carried_riders.append(obj)
+
+        #If a jar rides a platform, the player can ride jar, bugfix
+        for support in carried_riders:
+            support_rect = old_rider_rects[support]
+            for obj in riders:
+                if obj == support or obj in carried_riders:
+                    continue
+                if self.is_standing_on(obj, support_rect):
+                    obj.x += self.dx
+                    obj.y += self.dy
+
+        #Side hits collision, bugfix
+        if self.dx != 0:
+            for obj in riders:
+                if obj not in carried_riders:
+                    self.push_side_collision(obj, old_x, old_y, old_rider_rects[obj])
 
     def draw(self):
         draw_sprite("moving_platform", self.x, self.y, self.width, self.height)

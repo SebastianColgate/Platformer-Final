@@ -2,10 +2,11 @@ from raylib import *
 from pyray import *
 
 from entities import Player
-from helpers import calculate_clean_score, update_liquid_spread
+from helpers import calculate_clean_score, format_level_time, update_liquid_spread
+from menu import draw_game_clear_screen, draw_info_screen, draw_objective_briefing, draw_start_menu
 from settings import (
     BACKGROUND_PARALLAX,
-    LEVEL,
+    LEVELS,
     SCREEN_HEIGHT,
     SCREEN_WIDTH,
     TILE_AIR,
@@ -62,22 +63,15 @@ def draw_moving_platforms(moving_platforms):
         platform.draw()
 
 
-def draw_background(camera):
+def draw_background(camera, background_name, background_y, background_height):
     camera_x = camera.target.x - SCREEN_WIDTH / 2
     scroll_x = -(camera_x * BACKGROUND_PARALLAX) % SCREEN_WIDTH
-    draw_sprite("background", scroll_x - SCREEN_WIDTH, 0, SCREEN_WIDTH, SCREEN_HEIGHT)
-    draw_sprite("background", scroll_x, 0, SCREEN_WIDTH, SCREEN_HEIGHT)
-    draw_sprite("background", scroll_x + SCREEN_WIDTH, 0, SCREEN_WIDTH, SCREEN_HEIGHT)
+    draw_sprite(background_name, scroll_x - SCREEN_WIDTH, background_y, SCREEN_WIDTH, background_height)
+    draw_sprite(background_name, scroll_x, background_y, SCREEN_WIDTH, background_height)
+    draw_sprite(background_name, scroll_x + SCREEN_WIDTH, background_y, SCREEN_WIDTH, background_height)
 
 
-def format_level_time(seconds):
-    minutes = int(seconds // 60)
-    whole_seconds = int(seconds % 60)
-    hundredths = int((seconds - int(seconds)) * 100)
-    return f"{minutes:02}:{whole_seconds:02}.{hundredths:02}"
-
-
-def draw_top_bar(enemies, clean_score, level_timer, debug_mode):
+def draw_top_bar(enemies, clean_score, level_timer, debug_mode, level_name):
     bar_height = 98
     DrawRectangle(0, 0, SCREEN_WIDTH, bar_height, Fade(BLACK, 0.26))
     DrawRectangle(0, bar_height - 5, SCREEN_WIDTH, 5, Fade(DARKBLUE, 0.35))
@@ -92,7 +86,7 @@ def draw_top_bar(enemies, clean_score, level_timer, debug_mode):
     DrawText(clean_text, 12, 34, 20, RAYWHITE)
     DrawText(timer_text, 12, 58, 20, RAYWHITE)
 
-    title_text = b"Lebanon Resovoir"
+    title_text = level_name.encode("utf-8")
     pulse = 1.0 - abs((GetTime() % 4.0) / 2.0 - 1.0)
     title_size = int(33 + pulse * 7)
     title_x = SCREEN_WIDTH // 2 - MeasureText(title_text, title_size) // 2
@@ -170,16 +164,24 @@ def main():
 
     # Initialize
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Amphibi-Man Prototype".encode("utf-8"))
+    SetExitKey(KEY_NULL)
     SetTargetFPS(60)
     load_sprites()
 
     # Prepare Level data
-    game_level, spawn_position, jars, enemies, moving_platforms, exit_rect, total_water_tiles = parse_level(LEVEL)
+    current_level_index = 0
+    current_level = LEVELS[current_level_index]
+    game_level, spawn_position, jars, enemies, moving_platforms, exit_rect, total_water_tiles = parse_level(
+        current_level["layout"],
+        current_level["platforms"],
+    )
     player = Player(*spawn_position)
-    game_state = "PLAYING"
+    game_state = "MENU"
+    selected_menu_option = 0
     debug_mode = False
     active_liquid_spreads = []
     level_timer = 0.0
+    level_results = []
 
     #camera
     camera = Camera2D()
@@ -188,19 +190,45 @@ def main():
     camera.rotation = 0.0
     camera.zoom = 1.0
 
-    #Put here because was having issues when outside with scope
-    def restart_level():
+    def load_level(level_index):
 
-        #Took a long time to figure out how to use this effectivly
+        #Took a long time to figure out how to use this effectivly, nonlocal helped a ton
+        nonlocal current_level_index, current_level
         nonlocal game_level, spawn_position, jars, enemies, moving_platforms, exit_rect
         nonlocal total_water_tiles, player, game_state, active_liquid_spreads, level_timer
 
-        game_level, spawn_position, jars, enemies, moving_platforms, exit_rect, total_water_tiles = parse_level(LEVEL)
+        current_level_index = level_index
+        current_level = LEVELS[current_level_index]
+        game_level, spawn_position, jars, enemies, moving_platforms, exit_rect, total_water_tiles = parse_level(
+            current_level["layout"],
+            current_level["platforms"],
+        )
         player = Player(*spawn_position)
         active_liquid_spreads = []
         level_timer = 0.0
         game_state = "PLAYING"
         update_camera(camera, player)
+
+    def restart_level():
+        load_level(current_level_index)
+
+    #saves level results
+    def finish_level(clean_score):
+        
+        nonlocal game_state
+
+        level_results.append(
+            {
+                "name": current_level["name"],
+                "clean_score": clean_score,
+                "time": level_timer,
+            }
+        )
+
+        if current_level_index >= len(LEVELS) - 1:
+            game_state = "GAME_CLEAR"
+        else:
+            game_state = "LEVEL_CLEAR"
 
 
     #Gameloop
@@ -209,7 +237,77 @@ def main():
         restarted_this_frame = False
 
         # update
-        if IsKeyPressed(KEY_R):
+        if game_state == "MENU":
+            if IsKeyPressed(KEY_ESCAPE):
+                break
+            if IsKeyPressed(KEY_UP) or IsKeyPressed(KEY_W):
+                selected_menu_option = (selected_menu_option - 1) % 2
+            if IsKeyPressed(KEY_DOWN) or IsKeyPressed(KEY_S):
+                selected_menu_option = (selected_menu_option + 1) % 2
+            if IsKeyPressed(KEY_C):
+                game_state = "CONTROLS"
+            if IsKeyPressed(KEY_ENTER) or IsKeyPressed(KEY_SPACE):
+                if selected_menu_option == 0:
+                    game_state = "OBJECTIVE_BRIEFING"
+                else:
+                    game_state = "CONTROLS"
+
+            BeginDrawing()
+            draw_start_menu(selected_menu_option)
+            EndDrawing()
+            continue
+
+        if game_state == "OBJECTIVE_BRIEFING":
+            if IsKeyPressed(KEY_ESCAPE) or IsKeyPressed(KEY_BACKSPACE):
+                game_state = "MENU"
+            if IsKeyPressed(KEY_ENTER) or IsKeyPressed(KEY_SPACE):
+                level_results = []
+                load_level(0)
+
+            BeginDrawing()
+            draw_objective_briefing()
+            EndDrawing()
+            continue
+
+        if game_state == "CONTROLS":
+            if IsKeyPressed(KEY_ESCAPE) or IsKeyPressed(KEY_BACKSPACE) or IsKeyPressed(KEY_ENTER):
+                game_state = "MENU"
+
+            BeginDrawing()
+            draw_info_screen(
+                "CONTROLS",
+                [
+                    "Move: A/D or LEFT/RIGHT",
+                    "Jump: SPACE or UP",
+                    "Swim up: tap SPACE / UP / W repeatedly",
+                    "Push jars into water to poison or cure it",
+                    "R restarts, P pauses, F1 shows hitboxes",
+                    "F2 instantly clears enemies for debugging",
+                ],
+            )
+            EndDrawing()
+            continue
+
+        if game_state == "GAME_CLEAR":
+            if IsKeyPressed(KEY_ESCAPE):
+                break
+            if IsKeyPressed(KEY_ENTER) or IsKeyPressed(KEY_SPACE):
+                selected_menu_option = 0
+                game_state = "MENU"
+
+            BeginDrawing()
+            draw_game_clear_screen(level_results)
+            EndDrawing()
+            continue
+
+        if game_state == "LEVEL_CLEAR":
+            if IsKeyPressed(KEY_ENTER) or IsKeyPressed(KEY_SPACE):
+                load_level(current_level_index + 1)
+            if IsKeyPressed(KEY_ESCAPE):
+                selected_menu_option = 0
+                game_state = "MENU"
+
+        if game_state in ("PLAYING", "PAUSED") and IsKeyPressed(KEY_R):
             restart_level()
             restarted_this_frame = True
 
@@ -221,6 +319,10 @@ def main():
 
         if IsKeyPressed(KEY_F1):
             debug_mode = not debug_mode
+
+        #debug kill
+        if game_state == "PLAYING" and IsKeyPressed(KEY_F2):
+            enemies = []
 
         if game_state == "PLAYING" and not restarted_this_frame:
             level_timer += delta_time
@@ -287,7 +389,7 @@ def main():
                 #Level end condition (not finished)
                 if not restarted_this_frame and exit_rect is not None and CheckCollisionRecs(player.get_rect(), exit_rect):
                     if not enemies:
-                        game_state = "LEVEL_CLEAR"
+                        finish_level(calculate_clean_score(game_level, total_water_tiles))
 
 
 
@@ -301,7 +403,12 @@ def main():
         #draw
         BeginDrawing()
         ClearBackground(SKYBLUE)
-        draw_background(camera)
+        draw_background(
+            camera,
+            current_level["background"],
+            current_level["background_y"],
+            current_level["background_height"],
+        )
 
         BeginMode2D(camera)
         draw_level(game_level, exit_rect, exit_unlocked)
@@ -319,7 +426,7 @@ def main():
         EndMode2D()
 
         #Basic top UI and Enemy counter, cleanscore
-        draw_top_bar(enemies, clean_score, level_timer, debug_mode)
+        draw_top_bar(enemies, clean_score, level_timer, debug_mode, current_level["name"])
 
         if game_state == "PAUSED":
             DrawRectangle(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, Fade(BLACK, 0.45))
@@ -334,6 +441,8 @@ def main():
             DrawText(clear_text, SCREEN_WIDTH // 2 - MeasureText(clear_text, 42) // 2, 220, 42, WHITE)
             DrawText(score_text, SCREEN_WIDTH // 2 - MeasureText(score_text, 28) // 2, 276, 28, WHITE)
             DrawText(time_text, SCREEN_WIDTH // 2 - MeasureText(time_text, 26) // 2, 312, 26, WHITE)
+            next_text = f"Press ENTER for {LEVELS[current_level_index + 1]['name']}".encode("utf-8")
+            DrawText(next_text, SCREEN_WIDTH // 2 - MeasureText(next_text, 24) // 2, 352, 24, WHITE)
 
         EndDrawing()
 
