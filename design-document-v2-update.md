@@ -202,3 +202,44 @@ The main appeal is that the player is not just moving through the level — they
 #Story (If implemented)
 There wont be too much world building, but in general, you are a player who was tranformed by chemicals to have the ability to be amphibious. You want to cure yourself, and to do so you must traverse the castle that is overrun with different chemicals, posions, antidotes, and enemies that have over run it in search of the cure serum. To progress, however, you need to take care of all the enemies in your way, and find the keys they hold to the next level. At the end, you can cure your amphibious transformation. 
 
+
+
+# Final Project Addendum and submission
+
+## Screenshot
+![Gameplay screenshot](<Screenshot 2026-05-04 221036.png>)
+
+The repo also includes a `screenshots` folder with four representative screenshots:
+
+
+## Technical Section
+The two most important technical parts of the game are the liquid system and the collision / movement system.
+
+The liquid system is tile based. Water, poison water, and solid blocks are stored inside the level grid. When a poison jar or antidote jar breaks in water, the game starts a flood-fill style spread. Instead of changing every connected tile instantly, the spread moves tile by tile over time, which was trickier to implement, as initially it did at near frame perfect speed. This change made the poison and antidote feel more visible and satisfying, and gives the player a clearer sense that the level is changing.
+
+The other major technical part is the player and object collision system. The player can switch between a land hitbox and a swimming hitbox, which both changes how the player moves (such as walking and jumping, or swimming) as well as how they are positioned, so the code has to check that the new shape is "safe" before changing modes. Moving platforms also carry jars, the player can stand on jars, and the player can be pushed by platforms from the side. This ended up taking a bunch of extra collision checks because the game has stacked interactions, not just simple player-versus-wall collision. I suspect in a game engine, this would not be as complicated, such as adding a list of riders to each platform, and actually just using basic physics of the engine. 
+
+## Art / AI Sprite Generation
+Most of the art is simple pixel art. Most sprites were originally AI generated, but took EXTENSIVE retouching and reformatting, and just straight up editing from myself, especially when it came to formatting. All generated sprites were unable to have transparent backgrounds, as well as any kind of continutity between them, so I had to manually change color shemes, remove edges and backgrounds, and many other details. I am worried that on a projector wall, things I couldnt see on my computer screen may be visible, but for the scope of play that isnt in the vault, I am very happy with the final result. 
+
+Tools used for art cleanup included Photopea, and Aseprite for resizing and transparency cleanup. The game uses individual image files instead of sprite sheets because the generated frames were not all the exact same size, making a consistent sprite sheet quite a hassel. 
+
+An example AI sprite prompt used for this kind of asset was:
+`Create a small pixel art amphibious mutant player character for a 2D platformer, transparent background, facing right, in an idle pose.`
+
+AI image generation was used as a starting point for several sprites, but the final versions were manually selected, resized, cleaned up, and adjusted for this project.
+
+## Credits / References
+- Raylib / pyray documentation and class examples were used for window setup, drawing, input, rectangles, textures, and collision.
+- The base platformer structure came from class platformer work and was expanded into this final project.
+- The main menu structure was based on a similar state-screen technique from my midterm project.
+- Background art reference / source: CraftPix free pixel art nature backgrounds, linked earlier. 
+- reference of floodfill algorith, also linked earlier in doc
+
+
+## AI Intervention
+AI assistance was primarily used for asset generation, as I am not a great artist, and finding consistent sprites across the web for free is supriningly difficult. This was the main contrivution from AI. Another aspect it did help me with was doing a player simulation/animation for the menu screens, but I make a point to still self implement my code, even if referenced from other materials, be it stack over flow, AI, class linked tutorials or whatever else. And this case is no different, even if consulted. 
+
+## Demo Video Link
+Google Drive demo video link: **https://drive.google.com/file/d/1IUtEQIP1fcqS641QPDAlXT2NBnrCh2GL/view?usp=drive_link**
+
